@@ -36,14 +36,14 @@ def calculate_macd(data, short_window=12, long_window=26, signal_window=9):
 def calculate_sma(data, window=50):
     return data['Adj Close'].rolling(window=window).mean()
 
-# Function to forecast future prices using Prophet
+# Function to forecast future values using Prophet (better for time series)
 def forecast_with_prophet(data, column, periods=126):
     df = pd.DataFrame()
     df['ds'] = data.index
     df['y'] = data[column].values
     
     # Train Prophet model
-    model = Prophet(yearly_seasonality=True, daily_seasonality=False)
+    model = Prophet(yearly_seasonality=True, daily_seasonality=True)
     model.fit(df)
     
     # Create a future dataframe for forecasting
@@ -59,7 +59,7 @@ def forecast_with_prophet(data, column, periods=126):
     return forecast_df
 
 # Streamlit App
-st.title("S&P 500 Indicator Prediction for Next 6 Months with SMA based on Price Forecast")
+st.title("S&P 500 Indicator Prediction for Next 6 Months")
 
 # Fetch S&P 500 data for the last 15 years
 data = get_data_from_yfinance(ticker)
@@ -72,12 +72,11 @@ data['SMA'] = calculate_sma(data)
 # Remove missing values (from rolling calculations)
 data.dropna(inplace=True)
 
-# Forecast for 6 months ahead using Prophet for price
-forecast_periods = 126  # 6 months of business days (approx 21 days per month)
+# Forecast for 6 months ahead using Prophet, starting from next month
+forecast_periods = 126  # Approx. 6 months of business days
+rsi_forecast = forecast_with_prophet(data, 'RSI', forecast_periods)
+macd_forecast = forecast_with_prophet(data, 'MACD', forecast_periods)
 price_forecast = forecast_with_prophet(data, 'Adj Close', forecast_periods)
-
-# Calculate SMA based on forecasted prices
-price_forecast['SMA'] = price_forecast['Adj Close'].rolling(window=50).mean()
 
 # **Fix: Limit the data to show only the last year**
 data = data[data.index >= pd.Timestamp(datetime.date.today() - datetime.timedelta(days=365))]
@@ -97,7 +96,7 @@ show_sma = st.checkbox('Show SMA on Price Chart', value=True)
 # Plot SMA
 if show_sma:
     fig_price.add_trace(go.Scatter(x=data.index, y=data['SMA'], mode='lines', name='SMA', line=dict(color='red')))
-    fig_price.add_trace(go.Scatter(x=price_forecast.index, y=price_forecast['SMA'], mode='lines', name='SMA Forecast', line=dict(color='orange', dash='dash')))
+    fig_price.add_trace(go.Scatter(x=price_forecast.index, y=price_forecast['Adj Close'], mode='lines', name='SMA Forecast', line=dict(color='orange', dash='dash')))
 
 # Customize layout for price and SMA
 fig_price.update_layout(title="S&P 500 Price and SMA with 6-Month Forecast", xaxis_title="Date", yaxis_title="Price (USD)", template="plotly_white")
@@ -107,7 +106,6 @@ st.plotly_chart(fig_price)
 st.subheader("RSI with 6-Month Forecast")
 fig_rsi = go.Figure()
 fig_rsi.add_trace(go.Scatter(x=data.index, y=data['RSI'], mode='lines', name='RSI', line=dict(color='green')))
-rsi_forecast = forecast_with_prophet(data, 'RSI', forecast_periods)
 fig_rsi.add_trace(go.Scatter(x=rsi_forecast.index, y=rsi_forecast['RSI'], mode='lines', name='RSI Forecast', line=dict(color='orange', dash='dash')))
 fig_rsi.update_layout(title="RSI with 6-Month Forecast", xaxis_title="Date", yaxis_title="RSI", template="plotly_white")
 st.plotly_chart(fig_rsi)
@@ -116,7 +114,6 @@ st.plotly_chart(fig_rsi)
 st.subheader("MACD with 6-Month Forecast")
 fig_macd = go.Figure()
 fig_macd.add_trace(go.Scatter(x=data.index, y=data['MACD'], mode='lines', name='MACD', line=dict(color='purple')))
-macd_forecast = forecast_with_prophet(data, 'MACD', forecast_periods)
 fig_macd.add_trace(go.Scatter(x=macd_forecast.index, y=macd_forecast['MACD'], mode='lines', name='MACD Forecast', line=dict(color='orange', dash='dash')))
 fig_macd.update_layout(title="MACD with 6-Month Forecast", xaxis_title="Date", yaxis_title="MACD", template="plotly_white")
 st.plotly_chart(fig_macd)
