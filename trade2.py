@@ -1,3 +1,5 @@
+#linked to github for teh webapp that shows the trades and potentia/realized gains
+
 import streamlit as st
 import yfinance as yf
 import pandas as pd
