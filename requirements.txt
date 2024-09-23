@@ -5,3 +5,4 @@ plotly
 alpha_vantage
 prophet
 datetime
+numpy<2.0 
